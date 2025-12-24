@@ -15,15 +15,21 @@
 本程式核心基於數位訊號處理 (DSP) 理論：
 
 1. **訊號合成原理**：模擬訊號由主頻率正弦波與隨機雜訊組成：
-   $$x(t) = A \sin(2\pi f t) + N(\mu, \sigma)$$
+   $$
+   x(t) = A \sin(2\pi f t) + N(\mu, \sigma)
+   $$
    其中 $N(\mu, \sigma)$ 代表平均值為 $\mu$、標準差為 $\sigma$ 的常態分佈雜訊 (Gaussian Noise)。
 
 2. **快速傅立葉變換 (FFT)**：為了分析頻率成分，我們將離散時域訊號 $x[n]$ 轉換為頻域訊號 $X[k]$：
-   $$X[k] = \sum_{n=0}^{N-1} x[n] e^{-j \frac{2\pi}{N} k n}$$
+   $$
+   X[k] = \sum_{n=0}^{N-1} x[n] e^{-j \frac{2\pi}{N} k n}
+   $$
    這讓我們能從雜亂的時域波形中，分離出特定頻率的訊號與寬頻雜訊。
 
 3. **頻域濾波 (Frequency Domain Filtering)**：低通濾波器的運作原理是對頻譜套用一個遮罩 (Mask) $H[k]$：
-   $$Y[k] = X[k] \cdot H[k]$$
+   $$
+   Y[k] = X[k] \cdot H[k]
+   $$
    其中截止頻率 (Cutoff Frequency) $f_c$ 定義了遮罩範圍：
    $$
    H[k] = \begin{cases} 
