@@ -32,8 +32,10 @@
 
 ## (2) 使用方式 (Usage)
 環境建置請確保已安裝以下 Python 套件：
-```bash
-pip install numpy matplotlib scipy
+
+`pip install numpy matplotlib scipy`
+
+---
 
 ## (3) 程式的架構 (Architecture)
 本程式採用 MVC (Model-View-Controller) 變體架構，確保邏輯清晰並對應上述數學原理：
