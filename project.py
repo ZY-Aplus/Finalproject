@@ -29,7 +29,6 @@ class SignalWorkbench:
         self.setup_ui()
         
         # --- 初始化訊號 ---
-        # ★★★ 修正點：這裡原本寫錯成 update_source，改為 on_source_change ★★★
         self.on_source_change()
 
     def setup_ui(self):
@@ -154,18 +153,45 @@ class SignalWorkbench:
         self.ax2.clear()
         self.ax3.clear()
 
-        # 顯示範圍限制 (優化效能與視覺)
-        display_limit = 1000 # 只畫前 1000 點來看波形細節
+        # --- 設定顯示範圍 (Zoom Logic) ---
+        display_limit = 1000 # 畫 1000 個點
         
-        # 1. 原始訊號
-        if self.input_signal is not None:
-            self.ax1.plot(self.t[:display_limit], self.input_signal[:display_limit], color='gray', alpha=0.7, label='Input Signal (with Noise)')
-        self.ax1.set_title("Input Time Domain Signal")
-        self.ax1.set_ylabel("Amplitude")
-        self.ax1.legend(loc="upper right")
-        self.ax1.grid(True, alpha=0.3)
+        # 預設從頭開始 (模擬模式)
+        start_idx = 0
+        end_idx = display_limit
 
-        # 2. 頻譜圖 (只顯示正頻率部分)
+        if self.input_signal is not None:
+            total_len = len(self.input_signal)
+            
+            # ★★★ 關鍵修正：如果是讀檔模式，我們抓正中間的數據，避開開頭靜音 ★★★
+            if self.is_file_mode and total_len > display_limit:
+                start_idx = total_len // 2  # 從中間開始
+                end_idx = start_idx + display_limit
+            
+            # 邊界檢查
+            if end_idx > total_len:
+                start_idx = 0
+                end_idx = min(display_limit, total_len)
+
+            # 1. 原始訊號 (上圖)
+            self.ax1.plot(self.t[start_idx:end_idx], self.input_signal[start_idx:end_idx], 
+                          color='gray', alpha=0.7, label='Input Signal (Zoomed)')
+            self.ax1.set_title("Input Time Domain Signal (Waveform)")
+            self.ax1.set_ylabel("Amplitude")
+            self.ax1.legend(loc="upper right")
+            self.ax1.grid(True, alpha=0.3)
+
+            # 3. 濾波後訊號 (下圖) - 必須跟上圖同一段時間，才能比較
+            if self.filtered_signal is not None:
+                self.ax3.plot(self.t[start_idx:end_idx], self.filtered_signal[start_idx:end_idx], 
+                              color='green', linewidth=2, label='Restored Signal')
+            
+            self.ax3.set_title("Restored Time Domain Signal (After IFFT)")
+            self.ax3.set_xlabel("Time (s)")
+            self.ax3.legend(loc="upper right")
+            self.ax3.grid(True, alpha=0.3)
+
+        # 2. 頻譜圖 (中圖) - 頻譜是看整體的，不需要切片
         if self.fft_freq is not None:
             half_N = len(self.fft_freq) // 2
             pos_freqs = self.fft_freq[:half_N]
@@ -181,19 +207,11 @@ class SignalWorkbench:
             self.ax2.axvline(x=cutoff, color='blue', linestyle='--', label=f'Cutoff: {cutoff} Hz')
             self.ax2.legend()
 
-            # 自動縮放 X 軸 (自適應顯示)
+            # 自適應 X 軸縮放
             if self.is_file_mode:
-                self.ax2.set_xlim(0, 5000) # 真實音樂通常看 5kHz 以內較清楚
+                self.ax2.set_xlim(0, 5000) # 真實音樂看 5kHz
             else:
-                self.ax2.set_xlim(0, 2000) # 模擬訊號通常頻率較低
-
-        # 3. 濾波後訊號
-        if self.filtered_signal is not None:
-            self.ax3.plot(self.t[:display_limit], self.filtered_signal[:display_limit], color='green', linewidth=2, label='Restored Signal')
-        self.ax3.set_title("Restored Time Domain Signal (After IFFT)")
-        self.ax3.set_xlabel("Time (s)")
-        self.ax3.legend(loc="upper right")
-        self.ax3.grid(True, alpha=0.3)
+                self.ax2.set_xlim(0, 2000) # 模擬訊號看 2kHz
 
         self.canvas.draw()
 
@@ -239,7 +257,7 @@ class SignalWorkbench:
         if self.filtered_signal is None:
             return
 
-        # 安全防護：音量正規化 (避免爆音)
+        # 安全防護：音量正規化
         data_to_play = self.filtered_signal.copy()
         max_val = np.max(np.abs(data_to_play))
         if max_val > 0:
